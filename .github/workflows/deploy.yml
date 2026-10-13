@@ -1,0 +1,91 @@
+name: Deploy to GitHub Pages
+
+# Builds every pull request (as a check) and deploys main to
+# https://veyra-studio.github.io/durex/ — always with the newest engine from
+# veyra-core's `release` branch. When the engine changes the site rebuilds:
+# right away on an `engine-updated` dispatch from veyra-core's CI, otherwise
+# within the hour (a scheduled check against the deployed engine.json).
+#
+# One-time setup: Settings → Pages → Build and deployment → Source:
+# "GitHub Actions".
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [engine-updated]
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  # Never cancel a deployment in progress; superseded PR checks may go.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  engine:
+    # Scheduled runs rebuild only when the engine moved since the deployed build.
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.compare.outputs.changed }}
+    steps:
+      - id: compare
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Until Pages is switched on (the one-time setup above) there is nothing to deploy to: wait, don't fail every hour.
+          if ! gh api "repos/${{ github.repository }}/pages" --silent; then
+            echo "::notice::GitHub Pages is off: Settings → Pages → Source: GitHub Actions."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          latest=$(git ls-remote https://github.com/veyra-studio/veyra-core.git refs/heads/release | cut -f1)
+          deployed=$(curl -fsS "https://veyra-studio.github.io/durex/engine.json?t=$(date +%s)" | jq -r '.commit // empty' || true)
+          echo "engine release: ${latest:-none} · deployed: ${deployed:-none}"
+          if [ -n "$latest" ] && [ "$latest" != "$deployed" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; else echo "changed=false" >> "$GITHUB_OUTPUT"; fi
+
+  build:
+    needs: engine
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || needs.engine.outputs.changed == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Use the newest engine release
+        run: npm run engine:update
+      - run: npm run build
+      - name: Check the build targets the /durex/ base path
+        run: |
+          grep -q 'src="/durex/assets/' dist/index.html || { echo "::error::dist/index.html does not reference /durex/assets/"; exit 1; }
+          test -f dist/favicon.svg
+          test -f dist/404.html
+          jq -e '.commit | test("^[0-9a-f]{40}$")' dist/engine.json
+      - if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

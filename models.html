@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Durex Invisible — the models | a Veyra concept</title>
+    <meta name="description" content="The foil packet and the condom of the Durex Invisible concept, generated in code. Review page." />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#04050b" />
+    <meta name="color-scheme" content="dark" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body class="review">
+    <main class="review-ui">
+      <header class="review-head">
+        <p class="eyebrow">Durex Invisible · the models</p>
+        <h1>A packet, and what's in it.</h1>
+        <p class="review-note">Generated in code — no photos, no model files. Drag to turn, scroll to zoom.</p>
+      </header>
+      <section class="review-panel" aria-label="Controls">
+        <div class="review-views" role="group" aria-label="View">
+          <button type="button" data-view="both" aria-pressed="true">Both</button>
+          <button type="button" data-view="packet" aria-pressed="false">Packet</button>
+          <button type="button" data-view="condom" aria-pressed="false">Condom</button>
+        </div>
+        <label class="review-slider">
+          <span>Unroll</span>
+          <input type="range" min="0" max="1" step="0.001" value="0" data-unroll />
+          <output data-unroll-out>0%</output>
+        </label>
+        <label class="review-slider">
+          <span>Air</span>
+          <input type="range" min="0" max="45" step="0.1" value="0" data-air disabled />
+          <output data-air-out>0.0 L</output>
+        </label>
+        <p class="review-scale">
+          <span><b>18 L</b> the international standard's minimum burst volume</span>
+          <span><b>≈ 40 L</b> what Durex says a typical one holds</span>
+        </p>
+        <div class="review-toggles">
+          <label><input type="checkbox" data-spin checked /> Turn slowly</label>
+          <button type="button" data-flip>Show the back</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="/src/models.ts"></script>
+  </body>
+</html>
