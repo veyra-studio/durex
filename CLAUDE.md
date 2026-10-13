@@ -15,6 +15,8 @@ VEYRA_CORE_SRC=../veyra-core npm run dev   # alias the engine to its source ($en
 
 Workflow: commit and push straight to `main` from the owner's machine (no pull requests).
 
+The owner's npm installs through a mirror (`npm config get registry`): a lockfile written there points at it, and GitHub's runners can't reach it (`npm ci` hangs, then fails with «Exit handler never called!»). After an `npm install` that adds or updates packages, rewrite the `resolved` hosts to `https://registry.npmjs.org` before committing — npm maps them back to the mirror locally by itself. The deploy stops early if one slips through.
+
 ## Rules
 
 - English, left to right. Witty and luxurious, never explicit: no bodies, no acts, nothing a billboard couldn't carry.

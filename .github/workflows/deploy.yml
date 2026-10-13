@@ -62,6 +62,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Check the lockfile resolves from the public registry
+        run: |
+          # A lockfile written behind an npm mirror points at it; runners can't reach it and npm ci hangs.
+          if grep -oE '"resolved": "https://[^/"]+' package-lock.json | grep -v 'https://registry.npmjs.org'; then
+            echo "::error::package-lock.json resolves packages from a mirror (above): rewrite those hosts to https://registry.npmjs.org"
+            exit 1
+          fi
       - run: npm ci
       - name: Use the newest engine release
         run: npm run engine:update
