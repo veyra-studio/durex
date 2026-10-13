@@ -1,6 +1,6 @@
 # Durex — «Zero gravity.»
 
-**Status: built — every chapter.** Veyra's second showcase: an English, art-directed campaign concept for **Durex Invisible**, made with the [Veyra](https://github.com/veyra-studio/veyra-core) engine. Live: <https://veyra-studio.github.io/durex/> · the models on their own, with every sound: <https://veyra-studio.github.io/durex/models.html>. The plan for all Veyra repositories lives in [veyra-core/docs/PLAN.md](https://github.com/veyra-studio/veyra-core/blob/main/docs/PLAN.md) (Phase 6).
+**Status: complete.** Veyra's second showcase: an English, art-directed campaign concept for **Durex Invisible**, made with the [Veyra](https://github.com/veyra-studio/veyra-core) engine. Live: <https://veyra-studio.github.io/durex/> · the models on their own, with every sound: <https://veyra-studio.github.io/durex/models.html>. The plan for all Veyra repositories lives in [veyra-core/docs/PLAN.md](https://github.com/veyra-studio/veyra-core/blob/main/docs/PLAN.md) (Phase 6).
 
 ```bash
 npm install && npm run dev      # http://localhost:5173/durex/
@@ -27,7 +27,7 @@ Everything floats. Foil packets drift in a dark studio like objects in orbit; on
 | 01 | **Rip** | It tears along a jagged line under the seal, right to left, the strip peeling back and tumbling away («Rrrip.»); the ring slides out of the opening as the packet drops back into the dark. | shader-clipped foil, scrubbed |
 | 02 | **Roll** | The ring unrolls into the sheath, latex squeaking — «Thin enough to forget.» 180 mm of very nearly nothing. | the turned film rebuilt per frame |
 | 03 | **Pump** *(the owner's idea)* | Hold the button or Space (scrolling fills it too): it swells into a round balloon, wobbling with each stroke. The gauge reads what the shape holds: 18 litres, «the international standard»; 40, «what Durex says a typical one holds» — «Still holding.» | `holdable`, volume integrated from the shape |
-| 04 | **Let go** *(the owner's idea)* | «Let go»: the air rushing out drives it round the page, light and fast, tumbling, off one edge and back in at the other, bouncing off the headlines (they jolt), squealing as the pressure — and the pitch — drops; spent, it drops. Or «Tie it»: it stays, floating beside you for the rest of the film, to be batted about. | `PhysicsWorld`, `domColliders`, `SoundBus.voice` |
+| 04 | **Let go** *(the owner's idea)* | «Let go»: the air rushing out drives it round the page, light and fast, tumbling, off one edge and back in at the other, bouncing off the headlines (they jolt), squealing as the pressure — and the pitch — drops; spent, it drops. Or «Tie it»: it stays, floating beside you for the rest of the film — give it a push. | `PhysicsWorld`, `domColliders`, `SoundBus.voice` |
 | 05 | **Tested** | A condom filled with water hangs by its rim; poke it (the button, or the drop itself) and it swings and wobbles, sloshing. Durex's testing, in their words. | springs, a water surface inside the film |
 | 06 | **Play safe** | Balloons rise from below the screen to above it, one after another, a few tinted in the packaging's colours; the pointer parts them. The WHO's line on condoms, word for word. | instancing |
 
