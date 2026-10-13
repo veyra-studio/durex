@@ -1,14 +1,16 @@
 /**
- * The film's sounds: natural recordings, all CC0 from Freesound (credited in
- * the footer), cut, levelled and compressed into src/sounds — and carried as
- * data inside scripts loaded on demand, never fetched as audio files, which
- * download managers (IDM and the like) would grab one after another. Nothing
- * plays while sound is off.
+ * The film's sounds: natural recordings, CC0 from Freesound, and «Smooth
+ * Lovin» by Kevin MacLeod (CC BY 4.0) — all credited in the footer — cut,
+ * levelled and compressed into sounds/, and carried as data inside scripts
+ * loaded on demand, never fetched as audio files, which download managers
+ * (IDM and the like) would grab one after another. Nothing plays while sound
+ * is off.
  *
  * Short sounds are grains of a longer take, picked at random — no two
- * crinkles alike. The pump, the escaping air and the music are loops that
- * cross-fade into themselves; the air's pitch follows the pressure left, so
- * the squeal drops as the balloon empties, and the music turns over on its bar.
+ * crinkles alike. The pump and the escaping air are loops that cross-fade
+ * into themselves; the air's pitch follows the pressure left, so the squeal
+ * drops as the balloon empties. The music is booked pass after pass on the
+ * audio clock, so its beat never slips.
  */
 import type { SoundBus, Voice } from '@veyra/core'
 
@@ -17,8 +19,12 @@ export type SoundName = 'cry' | 'rip' | 'crinkle' | 'pump' | 'squeal' | 'hiss' |
 /** Where the squeaks are in latex.mp3, and the sloshes in water.mp3 (seconds). */
 const SQUEAKS = [0.38, 1.18, 1.85, 2.2, 2.9, 3.4, 3.85, 4.48]
 const SLOSHES = [0.15, 1.35, 2.65, 3.85]
-/** The music: 24 bars of about 130 bpm; the take runs a second longer, for the cross-fade. */
-const MUSIC_LOOP = 24 * 1.8437
+/**
+ * The music: 16 bars at 75 bpm (`loop` seconds) and, before them, a `lead` —
+ * the tenth of a second before their first downbeat. At 0.49 it plays at about
+ * −24 LUFS, low behind everything.
+ */
+const MUSIC = { loop: 16 * 3.2, lead: 0.1, firstFade: 2.5, volume: 0.49 }
 
 export interface DurexSound {
   /** Fetches these ahead (no audio needed yet). */
@@ -51,7 +57,7 @@ export interface DurexSound {
   hush(): void
 }
 
-/** A take played round and round, each pass fading into the next. */
+/** A take played round and round, each pass fading into the next near its end. */
 class Loop {
   private voice: Voice | null = null
   /** Where in the buffer the current pass is (seconds), by the clock and the rate. */
@@ -62,7 +68,7 @@ class Loop {
   constructor(
     private readonly bus: SoundBus,
     private readonly buffer: () => AudioBuffer | null,
-    private readonly options: { fade: number; turnAt?: number; firstFade?: number },
+    private readonly options: { fade: number },
   ) {}
   get playing(): boolean {
     return this.voice !== null
@@ -70,7 +76,7 @@ class Loop {
   set(volume: number, rate: number): void {
     this.volume = volume
     this.rate = rate
-    if (!this.voice) this.start(this.options.firstFade ?? 0.12)
+    if (!this.voice) this.start(0.12)
     else {
       this.voice.setVolume(volume, 0.08)
       this.voice.setRate(rate, 0.08)
@@ -87,12 +93,11 @@ class Loop {
     const now = ctx.currentTime
     this.at += (now - this.last) * this.rate
     this.last = now
-    // Where the next pass begins: on the bar for music, near the end of the take otherwise.
-    const { fade, turnAt } = this.options
-    if (this.at > (turnAt ?? buffer.duration - fade - 0.05)) {
+    const { fade } = this.options
+    if (this.at > buffer.duration - fade - 0.05) {
       this.voice.stop(fade)
       this.voice = null
-      this.start(turnAt === undefined ? fade : 0.02)
+      this.start(fade)
     }
   }
   private start(fadeIn: number): void {
@@ -102,6 +107,61 @@ class Loop {
     this.voice = this.bus.voice(buffer, { volume: this.volume, rate: this.rate, fadeIn })
     this.at = 0
     this.last = ctx.currentTime
+  }
+}
+
+/**
+ * Music round and round, each pass booked ahead on the audio clock — not by
+ * frames — to begin exactly a loop after the last, so the beat never slips. A
+ * pass fades in over its lead while the one before fades out over the same
+ * moment before its own last downbeat, which the new pass alone then plays.
+ */
+class Tune {
+  private passes: { voice: Voice; at: number }[] = []
+  /** When the next pass begins (audio clock). */
+  private next = 0
+  private volume = 0
+  constructor(
+    private readonly bus: SoundBus,
+    private readonly buffer: () => AudioBuffer | null,
+    private readonly options: { loop: number; lead: number; firstFade: number },
+  ) {}
+  get playing(): boolean {
+    return this.passes.length > 0
+  }
+  play(volume: number): void {
+    const ctx = this.bus.context
+    if (this.passes.length || !ctx) return
+    this.volume = volume
+    this.next = ctx.currentTime
+    this.book(this.options.firstFade)
+  }
+  stop(fade: number): void {
+    const now = this.bus.context?.currentTime ?? 0
+    // A pass booked but not begun never sounds; the ones playing fade.
+    for (const pass of this.passes) {
+      if (pass.at > now) pass.voice.source.stop()
+      else pass.voice.stop(fade)
+    }
+    this.passes = []
+  }
+  update(): void {
+    const ctx = this.bus.context
+    if (!ctx || !this.passes.length) return
+    this.passes = this.passes.filter((p) => p.voice.playing)
+    // The next pass is booked a second ahead.
+    if (this.passes.length && this.next - ctx.currentTime < 1) this.book(this.options.lead)
+  }
+  private book(fadeIn: number): void {
+    const ctx = this.bus.context
+    const buffer = this.buffer()
+    if (!ctx || !buffer) return
+    // Late (the page stalled), it begins now, and the passes after keep to it.
+    const at = Math.max(this.next, ctx.currentTime + 0.02)
+    const voice = this.bus.voice(buffer, { volume: this.volume, fadeIn, fadeOut: this.options.lead, delay: at - ctx.currentTime })
+    if (!voice) return
+    this.passes.push({ voice, at })
+    this.next = at + this.options.loop
   }
 }
 
@@ -152,7 +212,7 @@ export function createSound(bus: SoundBus | null): DurexSound {
   const pumping = bus ? new Loop(bus, () => get('pump'), { fade: 0.3 }) : null
   const squeal = bus ? new Loop(bus, () => get('squeal'), { fade: 0.2 }) : null
   const hiss = bus ? new Loop(bus, () => get('hiss'), { fade: 0.3 }) : null
-  const tune = bus ? new Loop(bus, () => get('music'), { fade: 1, turnAt: MUSIC_LOOP, firstFade: 2.5 }) : null
+  const tune = bus ? new Tune(bus, () => get('music'), MUSIC) : null
   let lastTap = 0
   let musicOn = false
 
@@ -210,7 +270,7 @@ export function createSound(bus: SoundBus | null): DurexSound {
       musicOn = on
       if (!tune) return
       if (!on) tune.stop(1.2)
-      else if (bus?.audible && get('music')) tune.set(0.3, 1)
+      else if (bus?.audible && get('music')) tune.play(MUSIC.volume)
     },
     get musicPlaying() {
       return tune?.playing === true
@@ -220,7 +280,7 @@ export function createSound(bus: SoundBus | null): DurexSound {
       squeal?.update()
       hiss?.update()
       // The music starts as soon as it has been decoded, if it is wanted.
-      if (musicOn && tune && !tune.playing && bus?.audible && get('music')) tune.set(0.3, 1)
+      if (musicOn && tune && !tune.playing && bus?.audible && get('music')) tune.play(MUSIC.volume)
       tune?.update()
     },
     hush() {

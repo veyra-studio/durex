@@ -145,6 +145,7 @@ try {
       sources: document.querySelectorAll('.sources li').length,
       cited: [...document.querySelectorAll('sup a[href^="#source-"]')].every((a) => document.querySelector(a.getAttribute('href'))),
       credits: document.querySelectorAll('.credits a[href*="freesound.org"]').length,
+      music: !!document.querySelector('.credits a[href*="incompetech.com"]') && !!document.querySelector('.credits a[href="https://creativecommons.org/licenses/by/4.0/"]'),
       mail: document.querySelector('.commission a')?.getAttribute('href') ?? '',
     }))
     check(meta.lang === 'en', `lang="${meta.lang}"`)
@@ -152,6 +153,7 @@ try {
     check(meta.disclaimer.includes('unofficial') && meta.disclaimer.includes('not commissioned'), 'unofficial-concept disclaimer is present')
     check(meta.sources >= 6 && meta.cited, `the facts carry their sources, every citation resolves (${meta.sources})`)
     check(meta.credits === 8, `the recordings are credited (${meta.credits})`)
+    check(meta.music, 'the music is credited, with its licence (CC BY 4.0)')
     check(meta.mail.startsWith('mailto:itsmetti@proton.me'), 'the footer offers a site like this, by mail')
     await page.waitForSelector('.gate:not([hidden])', { timeout: 120000 })
     await page.keyboard.press('Tab')

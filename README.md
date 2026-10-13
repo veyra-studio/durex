@@ -22,7 +22,7 @@ Everything floats. Foil packets drift in a dark studio like objects in orbit; on
 | # | Chapter | What happens | Veyra at work |
 | --- | --- | --- | --- |
 | — | Loader | A packet's serrated edge lights up tooth by tooth; at 100% it tears. | `Preloader`, timelines |
-| — | **Opening** | A gate — «This one has sound.» Play it, or Silent, please. A baby cries («WAAAAAH!» on screen too) and is cut short by the punchline, «Annoying, isn't it?»; a jazz loop comes in low, and the packets sweep in from the sides. | `SoundBus`, split text |
+| — | **Opening** | A gate — «This one has sound.» Play it, or Silent, please. A baby cries («WAAAAAH!» on screen too) and is cut short by the punchline, «Annoying, isn't it?»; Kevin MacLeod's «Smooth Lovin» comes in low, and the packets sweep in from the sides. | `SoundBus`, split text |
 | 00 | **Zero gravity** | The packets float weightless, each a box in the physics world: they knock into each other and spin off, the pointer pushes them aside, and they keep out of the copy. One comes forward and turns right round. | three.js, instancing, `PhysicsWorld`, zones |
 | 01 | **Rip** | It tears along a jagged line under the seal, right to left, the strip peeling back and tumbling away («Rrrip.»); the ring slides out of the opening as the packet drops back into the dark. | shader-clipped foil, scrubbed |
 | 02 | **Roll** | The ring unrolls into the sheath, latex squeaking — «Thin enough to forget.» 180 mm of very nearly nothing. | the turned film rebuilt per frame |
@@ -35,11 +35,11 @@ Everything visual is generated live, as in Abali: no product photos, no model fi
 
 ## Sound
 
-The owner asked for natural sound: every sound is a public-domain (CC0) recording from Freesound, cut, levelled and compressed (`sounds/`), credited in the footer — the cry ([PickleJones](https://freesound.org/people/PickleJones/sounds/151085/)), the tear ([shutuplaika](https://freesound.org/people/shutuplaika/sounds/714213/)), foil ([Anthousai](https://freesound.org/people/Anthousai/sounds/337524/)), the pump ([otherthings](https://freesound.org/people/otherthings/sounds/65618/)), the air ([hareball101](https://freesound.org/people/hareball101/sounds/326756/), [xkeril](https://freesound.org/people/xkeril/sounds/760344/)), latex ([Huminaatio](https://freesound.org/people/Huminaatio/sounds/266979/)), water ([XxBirdoxX](https://freesound.org/people/XxBirdoxX/sounds/52297/)) and the music, 24 bars of «SexyJazzLooper» ([BaDoink](https://freesound.org/people/BaDoink/sounds/556672/)) looped on the bar. («Careless Whisper» was the owner's first wish; it is copyrighted, so not without a licence.)
+The owner asked for natural sound: every effect is a public-domain (CC0) recording from Freesound, cut, levelled and compressed (`sounds/`), credited in the footer — the cry ([PickleJones](https://freesound.org/people/PickleJones/sounds/151085/)), the tear ([shutuplaika](https://freesound.org/people/shutuplaika/sounds/714213/)), foil ([Anthousai](https://freesound.org/people/Anthousai/sounds/337524/)), the pump ([otherthings](https://freesound.org/people/otherthings/sounds/65618/)), the air ([hareball101](https://freesound.org/people/hareball101/sounds/326756/), [xkeril](https://freesound.org/people/xkeril/sounds/760344/)), latex ([Huminaatio](https://freesound.org/people/Huminaatio/sounds/266979/)) and water ([XxBirdoxX](https://freesound.org/people/XxBirdoxX/sounds/52297/)). The music is «Smooth Lovin» by Kevin MacLeod ([incompetech.com](https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1700077)), licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/): bars 17–32 of it, levelled and looped on the bar, and credited in the footer as the licence asks. («Careless Whisper» was the owner's first wish; it is copyrighted, so not without a licence.)
 
 - Sound is asked for at the gate, so it plays on an iPhone set to silent too; the HUD toggle turns it off and on.
 - The recordings travel as data inside scripts, never as audio files: download managers (IDM and the like) grab every .mp3 a page fetches. `npm run sounds` writes `sounds/*.mp3` into `src/sounds/*.ts` (generated, not committed; `dev`, `build` and `typecheck` run it).
-- Short sounds are grains of a longer take, picked at random; the pump, the air and the music are loops that cross-fade into themselves; the air's pitch follows the pressure.
+- Short sounds are grains of a longer take, picked at random; the pump and the air are loops that cross-fade into themselves, and the air's pitch follows the pressure. The music is booked pass after pass on the audio clock, so its beat never slips: each pass fades in over the tenth of a second before its first downbeat while the one before fades out over the same moment of its last bar.
 - Every sound has a word on screen («Rrrip.», «Squeak.», «Pfff.», «Pfffrrrrt!», «Slosh.»), so nothing depends on hearing it. Listen to each on the models page.
 
 ## Accessibility and fallbacks
@@ -60,7 +60,7 @@ Only well-sourced facts, attributed where they are the brand's own claims, each 
 
 - The product: **Durex Invisible**; English only.
 - The opening: a baby's cry, then «Annoying, isn't it?», then music, then the packets.
-- Natural recordings, not synthesized sound; a CC0 jazz loop in place of «Careless Whisper».
+- Natural recordings, not synthesized sound; «Smooth Lovin» (Kevin MacLeod, CC BY 4.0) in place of «Careless Whisper».
 - A round balloon when blown up; let go, it leaves one side of the screen and comes back in at the other.
 
 ## Sources
@@ -74,4 +74,4 @@ Only well-sourced facts, attributed where they are the brand's own claims, each 
 
 ## Credits
 
-Concept: [Veyra Studio](https://veyra-studio.github.io/) — commissions: [itsmetti@proton.me](mailto:itsmetti@proton.me). Sounds: the Freesound recordists above (CC0).
+Concept: [Veyra Studio](https://veyra-studio.github.io/) — commissions: [itsmetti@proton.me](mailto:itsmetti@proton.me). Sounds: the Freesound recordists above (CC0); music: Kevin MacLeod (CC BY 4.0).

@@ -22,6 +22,6 @@ writeFileSync(
 )
 writeFileSync(
   `${root}src/sounds/music.ts`,
-  header('24 bars of «SexyJazzLooper» by BaDoink (CC0, Freesound) plus a second of tail for the cross-fade, loaded once sound is on.') + `export const music = '${data('music')}'\n`,
+  header('16 bars of «Smooth Lovin» by Kevin MacLeod (incompetech.com, CC BY 4.0: credited in the footer) led in by the tenth of a second before them, loaded once sound is on.') + `export const music = '${data('music')}'\n`,
 )
 console.log(`src/sounds: ${effects.length} effects and the music, as data`)
