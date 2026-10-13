@@ -286,7 +286,7 @@ const choose = (what: 'go' | 'tie', how: 'button' | 'auto' = 'button') => {
   for (const button of letgoButtons) button.disabled = true
   if (what === 'tie') {
     if (!reduced) b.tie()
-    status.textContent = 'Tied. It’s yours for the rest of the film — bat it about.'
+    status.textContent = 'Tied. It’s yours for the rest of the film — give it a push.'
     sound.squeak(0.8)
     return
   }

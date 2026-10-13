@@ -255,7 +255,7 @@ export function createBalloon(stage: Stage, layer: ThreeLayer, physics: PhysicsW
         F.y -= 2400 * m
         F.z += -body.position.z * 2 * m
       } else {
-        // Tied: it floats at its home, bobbing; the hand bats it about.
+        // Tied: it floats at its home, bobbing; the hand pushes it away.
         const w = layer.width
         const ht = layer.height
         const to = v.set(home.x, home.y + Math.sin(time * 0.7) * ht * 0.03, 0)
