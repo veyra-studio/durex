@@ -3,3 +3,6 @@ node_modules/
 *.log
 .DS_Store
 verify-output/
+# Generated from sounds/*.mp3 by scripts/sound-data.mjs (npm run sounds; dev, build and typecheck run it).
+src/sounds/effects.ts
+src/sounds/music.ts

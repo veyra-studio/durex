@@ -7,7 +7,9 @@
  * rim, sampled at even steps of its own length, so the same film can be
  * rolled up into the ring (the rest wound into a torus), unrolled, and blown
  * up like a balloon: the closed end swells first and the bulb spreads down
- * toward the rim as air goes in. The latex thins as it stretches (the
+ * toward the rim as air goes in. Filled with water instead, it hangs: the
+ * water collects at the closed end in a drop, widest low down, under a
+ * slack neck. The latex thins as it stretches (the
  * `aStretch` attribute the latex material reads), and the volume reported
  * is integrated from the shape itself, so a gauge reading it is honest.
  * Units: millimetres; the open end at y = 0, the teat up (+y).
@@ -92,6 +94,10 @@ export interface Condom {
   unroll: number
   /** Air to blow in, in litres (when unrolled). */
   litres: number
+  /** Or water, in litres: a drop at the closed end (hang it teat down). */
+  water: number
+  /** The current outline, pole to rim (mm, local): radius and height of each row. */
+  readonly profile: { readonly r: Float64Array; readonly y: Float64Array }
   /** The air the shape holds, in litres, integrated from it at the last `update()`. */
   readonly volume: number
   /**
@@ -102,7 +108,7 @@ export interface Condom {
   readonly bottom: number
   readonly top: number
   readonly width: number
-  /** Rebuilds the surface from `unroll` and `litres`. */
+  /** Rebuilds the surface from `unroll`, `litres` and `water` (if they changed). */
   update(): void
   dispose(): void
 }
@@ -187,14 +193,24 @@ export function createCondom(tier: Tier): Condom {
 
   /** The bulb that holds `litres`: its widest radius and its height (mm). */
   const bulbFor = (litres: number, scale: number) => {
-    // Height over widest radius: a ball while small (2 is round), a long
-    // balloon once full.
-    const aspect = lerp(2.3, 5.2, smoothstep(0.5, 40, litres))
+    // Height over widest radius: a ball while small (2 is round), a full,
+    // rounded balloon once blown up — taller than wide, never a sausage.
+    const aspect = lerp(2.15, 3, smoothstep(0.5, 40, litres))
     const rb = Math.cbrt((litres * 1e6) / (0.55 * Math.PI * aspect)) * scale
+    return { rb: Math.max(rb, R * 1.04), hb: Math.max(rb, R * 1.04) * aspect }
+  }
+  /** A hanging drop of water: a little taller than round. */
+  const dropFor = (litres: number, scale: number) => {
+    const aspect = 2.35
+    const rb = Math.cbrt((litres * 1e6) / (0.62 * Math.PI * aspect)) * scale
     return { rb: Math.max(rb, R * 1.04), hb: Math.max(rb, R * 1.04) * aspect }
   }
 
   let volume = 0
+  let lastUnroll = NaN
+  let lastLitres = NaN
+  let lastWater = NaN
+  const profile = { r: pr, y: py }
   let bottom = 0
   let top: number = CONDOM.length
   let width: number = R
@@ -203,6 +219,8 @@ export function createCondom(tier: Tier): Condom {
     group,
     unroll: 0,
     litres: 0,
+    water: 0,
+    profile,
     get volume() {
       return volume
     },
@@ -217,6 +235,10 @@ export function createCondom(tier: Tier): Condom {
     },
     update() {
       const unroll = clamp(self.unroll)
+      if (unroll === lastUnroll && self.litres === lastLitres && self.water === lastWater) return
+      lastUnroll = unroll
+      lastLitres = self.litres
+      lastWater = self.water
       // How much film is unrolled; the rest is wound into the rim.
       const S = lerp(film.wallStart, film.length, unroll)
       let last = ROWS - 1
@@ -238,15 +260,22 @@ export function createCondom(tier: Tier): Condom {
       }
 
       // Air: a bulb from the closed end down to a front that reaches the rim
-      // by about 12 litres, then the whole balloon grows.
+      // by about 12 litres, then the whole balloon grows. Water: a drop at
+      // the closed end, widest low down (the group hangs it teat down).
       const air = unroll >= 0.999 ? Math.max(0, self.litres) : 0
-      if (air > 0.01) {
-        const front = lerp(film.wallStart * 1.15, film.length, smoothstep(0.05, 12, air)) / film.length
+      const water = unroll >= 0.999 && air <= 0.01 ? Math.max(0, self.water) : 0
+      const fill = air > 0.01 ? air : water
+      // Above a drop of water the film is slack: the neck lies flattened (rows from here to the rim).
+      let neckFrom = ROWS
+      if (fill > 0.01) {
+        const front = water > 0 ? 0.45 : lerp(film.wallStart * 1.15, film.length, smoothstep(0.05, 12, air)) / film.length
+        const bulge = water > 0 ? 1.6 : 0.85
         const qTeat = film.teatEnd / film.length
         let scale = 1
         for (let pass = 0; pass < 3; pass++) {
-          const { rb, hb } = bulbFor(air, scale)
+          const { rb, hb } = water > 0 ? dropFor(water, scale) : bulbFor(air, scale)
           const iFront = Math.min(ROWS - 1, Math.round(front * (ROWS - 1)))
+          if (water > 0) neckFrom = iFront
           const base = film.y[iFront]!
           for (let i = 0; i <= iFront; i++) {
             const q = i / (ROWS - 1)
@@ -259,7 +288,7 @@ export function createCondom(tier: Tier): Condom {
               // (Clamped: the row nearest the front may lie a hair past it.)
               const t = clamp((front - q) / Math.max(1e-6, front - qTeat))
               const end = lerp(R, T * 1.25, t)
-              pr[i] = end + (rb - end) * Math.sin(Math.PI * t ** 0.85) ** 0.6
+              pr[i] = end + (rb - end) * Math.sin(Math.PI * t ** bulge) ** 0.6
               py[i] = base + hb * t
             }
           }
@@ -270,7 +299,7 @@ export function createCondom(tier: Tier): Condom {
             v += Math.PI * rr * rr * Math.abs(py[i]! - py[i + 1]!)
           }
           // Correct the bulb's size toward the air asked for.
-          scale *= Math.cbrt(Math.max(1e-6, (air * 1e6) / Math.max(1, v)))
+          scale *= Math.cbrt(Math.max(1e-6, (fill * 1e6) / Math.max(1, v)))
           if (pass === 2) volume = v / 1e6
         }
       } else {
@@ -285,7 +314,7 @@ export function createCondom(tier: Tier): Condom {
       // Write the surface: positions, normals from the profile's slope, stretch.
       // Unrolled and empty, latex is limp: the tube lies a little flattened
       // and gently bent (the rim holds its end round); air rounds it out.
-      const limp = smoothstep(0.25, 0.7, unroll) * (1 - smoothstep(0.05, 1.5, air))
+      const limp = smoothstep(0.25, 0.7, unroll) * (1 - smoothstep(0.05, 1.5, air + water * 10))
       top = -Infinity
       bottom = Infinity
       width = 0
@@ -308,9 +337,11 @@ export function createCondom(tier: Tier): Condom {
         top = Math.max(top, py[i]!)
         bottom = Math.min(bottom, py[i]!)
         width = Math.max(width, pr[i]!)
+        // The neck over a drop of water carries its weight: drawn thinner, a little flat (the rim keeps its end round).
+        const neck = i > neckFrom ? smoothstep(neckFrom, neckFrom + 24, i) * (1 - smoothstep(ROWS - 16, ROWS - 1, i)) : 0
         const w = limp * smoothstep(0, 28, py[i]! - yRim)
-        const sx = 1 + 0.3 * w
-        const sz = 1 - 0.42 * w
+        const sx = (1 + 0.3 * w) * (1 - 0.2 * neck)
+        const sz = (1 - 0.42 * w) * (1 - 0.34 * neck)
         const u = (py[i]! - yRim) / CONDOM.length
         const bendX = w * 6 * Math.sin(Math.PI * u)
         const bendZ = w * 3 * Math.sin(2 * Math.PI * u + 0.6)

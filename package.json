@@ -6,17 +6,18 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build && node scripts/engine-stamp.mjs",
+    "dev": "node scripts/sound-data.mjs && vite",
+    "build": "node scripts/sound-data.mjs && tsc --noEmit && vite build && node scripts/engine-stamp.mjs",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/sound-data.mjs && tsc --noEmit",
     "verify": "node scripts/verify.mjs",
-    "engine:update": "npm install @veyra/core@github:veyra-studio/veyra-core#release"
+    "engine:update": "npm install @veyra/core@github:veyra-studio/veyra-core#release",
+    "sounds": "node scripts/sound-data.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",
-    "@fontsource/instrument-serif": "5.3.0",
     "@fontsource-variable/nunito": "5.3.0",
+    "@fontsource/instrument-serif": "5.3.0",
     "@veyra/core": "github:veyra-studio/veyra-core#release",
     "three": "0.186.1"
   },

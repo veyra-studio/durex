@@ -10,6 +10,7 @@ npm run dev            # Vite dev server: /durex/ (the film) and /durex/models.h
 npm run build          # tsc --noEmit + vite build (base /durex/)
 npm run verify         # Playwright checks on the production build → verify-output/ (-- --gpu: Metal on a Mac, Direct3D on Windows)
 npm run engine:update  # move to the newest engine release
+npm run sounds         # sounds/*.mp3 → src/sounds/*.ts as data (dev, build and typecheck run it)
 VEYRA_CORE_SRC=../veyra-core npm run dev   # alias the engine to its source ($env:VEYRA_CORE_SRC='../veyra-core'; npm run dev in PowerShell)
 ```
 
@@ -21,7 +22,11 @@ The owner's npm installs through a mirror (`npm config get registry`): a lockfil
 
 - English, left to right. Witty and luxurious, never explicit: no bodies, no acts, nothing a billboard couldn't carry.
 - Only sourced facts, attributed when they are the brand's claims, each linked in the footer (`.sources`). Keep the unofficial-concept disclaimer.
-- Everything visual and audible is generated in code: no photos, no model files, no recordings. The packet's look is our own take on the line (no packaging photographs were used); nothing of the brand's is committed.
+- Everything visual is generated in code: no photos, no model files. The packet's look is our own take on the line (no packaging photographs were used); nothing of the brand's is committed.
+- Sound is natural (the owner's call): CC0 recordings from Freesound, cut and levelled into `sounds/`, each credited in the footer (`.credits`) and the README. Only CC0 or licences that allow a public site — no copyrighted music. Never fetch audio files: download managers (IDM and the like) grab every .mp3 a page requests. `npm run sounds` writes them into `src/sounds/*.ts` as data, loaded in their own chunks (effects early, music after the gate).
+- The director: the chapters' scroll scenes only note how far along they are (`P` in `main.ts`); `direct()` turns that into the world's state once a frame, one owner per value, so scrolling back or jumping lands right. What reads the world's result (the gauge) runs after it (`onFrame` priority 60).
+- One physics world in CSS pixels (`gl/world.ts`): packets are boxes (group 1), the featured packet a kinematic box (16) that pushes them aside, the balloon a chain of spheres fitted to its shape (2), the headlines `domColliders` (4, `live` — they sit in sticky pins), the screen's walls planes (8; off in flight, when the balloon wraps from edge to edge). Packets never pass through each other; check it after touching the cloud.
+- Only a tied balloon comes along into the later chapters; the rest stays behind (no mixing on a fast scroll).
 - Models are measured: the packet is 54 mm square (`src/gl/foil.ts`), the condom 180 mm long and 54 mm in nominal width (`src/gl/condom.ts`). Change dimensions only against a source.
 - The condom's volume is integrated from its shape: anything showing litres reads `condom.volume`, never an invented curve.
 - The latex material (`src/gl/latex.ts`) is premultiplied: reflections add, the film's own light scales with how much film the eye looks through; a roll is many layers (`layers`, `satin`). Creases fade as film stretches and when finer than a pixel.

@@ -10,11 +10,64 @@ import { threeLayer } from '@veyra/core/three'
 import { createCondom } from './gl/condom'
 import { createPacket, PACKET_FONTS, type Tier } from './gl/foil'
 import { durexStudio } from './gl/light'
+import { createSound, type SoundName } from './sound'
 
 // The page scrolls nothing: the wheel zooms.
-const stage = createStage({ scroll: false, quality: { dprRange: [1, 2] } })
+const stage = createStage({ scroll: false, quality: { dprRange: [1, 2] }, sound: { storageKey: false } })
 const params = new URLSearchParams(location.search)
 const pinned = params.get('quality') as Tier | null
+
+// The sounds, to listen to one by one (a click turns sound on).
+const sounds = createSound(stage.sound)
+const ALL: SoundName[] = ['cry', 'rip', 'crinkle', 'pump', 'squeal', 'hiss', 'latex', 'water']
+let airFrom = -1
+let now = 0
+for (const button of document.querySelectorAll<HTMLButtonElement>('[data-sound]')) {
+  button.addEventListener('click', async () => {
+    await stage.sound?.enable()
+    sounds.prefetch(...ALL)
+    await sounds.ready(...ALL)
+    switch (button.dataset.sound) {
+      case 'cry':
+        sounds.cry()
+        break
+      case 'rip':
+        sounds.rip()
+        break
+      case 'crinkle':
+        sounds.crinkle(1)
+        break
+      case 'tap':
+        for (const delay of [0, 160, 290]) window.setTimeout(() => sounds.tap(0.8), delay)
+        break
+      case 'squeak':
+        sounds.squeak(1)
+        break
+      case 'pump':
+        sounds.pump(true)
+        window.setTimeout(() => sounds.pump(false), 2600)
+        break
+      case 'air':
+        airFrom = now
+        break
+      case 'slosh':
+        sounds.slosh(1)
+        break
+    }
+  })
+}
+// The air rushing out of a balloon over three seconds, as in the film.
+stage.onFrame((frame) => {
+  now = frame.time
+  if (airFrom >= 0) {
+    const left = 1 - (frame.time - airFrom) / 3
+    if (left <= 0) {
+      sounds.air(0, 0)
+      airFrom = -1
+    } else sounds.air(left ** 1.4, left ** 0.4)
+  }
+  sounds.update()
+}, Phase.update)
 
 if (!supportsWebGL2()) {
   document.querySelector('.review-note')!.textContent = 'This browser doesn’t offer WebGL2, so the models can’t be shown.'

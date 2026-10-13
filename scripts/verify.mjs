@@ -5,11 +5,17 @@
 //   npm run build && npm run verify -- --gpu   # on the GPU (Metal on a Mac, Direct3D on Windows)
 //
 // Checks: no console errors or failed requests, English semantics and copy,
-// the disclaimer, the sources and the commission address, keyboard entry,
-// the gate (with sound: the cry plays; silent: it doesn't), the opening and
-// the packets (kept clear of the copy), «Zero gravity» and its featured packet, the models page (the
-// volume a shape holds), reduced motion, mobile overflow, and the drawn
-// packet without WebGL. Screenshots go to verify-output/. Exits non-zero on failure.
+// the disclaimer, the sources (every citation resolves), the recordings'
+// credits and the commission address, keyboard entry, the gate (with sound:
+// the cry plays; silent: it doesn't), the opening and the packets (kept
+// clear of the copy), and the film chapter by chapter — the featured packet,
+// the tear, the unroll, pumping by mouse, space bar and scroll with the
+// gauge reading the shape, letting go (it flies, empties and lands inside
+// the screen) or tying it (it comes along), the water test swinging when
+// poked, the balloons rising — the models page (the volume a shape holds,
+// the sound board), reduced motion (no flight: it empties in place), every
+// chapter on a phone without overflow, and the drawn packet without WebGL.
+// Screenshots go to verify-output/. Exits non-zero on failure.
 import { spawn } from 'node:child_process'
 import { mkdirSync, rmSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -67,6 +73,8 @@ async function visit(browser, name, path, options, steps) {
   page.on('pageerror', (e) => errors.push(e.message))
   page.on('response', (r) => r.status() >= 400 && errors.push(`HTTP ${r.status()} ${r.url()}`))
   page.on('requestfailed', (r) => errors.push(`request failed ${r.url()} ${r.failure()?.errorText}`))
+  // Download managers (IDM and the like) grab every audio file a page fetches: the sounds travel as data in scripts.
+  page.on('request', (r) => /\.(mp3|ogg|wav|m4a|aac|flac)(\?|$)/i.test(r.url()) && errors.push(`audio file fetched ${r.url()}`))
   await page.goto(`${BASE}${path}`, { waitUntil: 'load' })
   try {
     await steps(page)
@@ -97,6 +105,33 @@ const scrollTo = (page, sel, p) =>
     },
     [sel, p],
   )
+/** Waits for a condition in the page (frame time runs slow on software rendering), quietly. */
+const until = (page, fn, arg, timeout = 30000) => page.waitForFunction(fn, arg, { timeout }).catch(() => {})
+const balloon = (page) => page.evaluate(() => ({ mode: window.__durex.world.balloon.mode, volume: window.__durex.world.balloon.condom.volume }))
+/** The largest swing of the water test over `ms`. */
+const swingPeak = (page, ms) =>
+  page.evaluate(
+    (ms) =>
+      new Promise((resolve) => {
+        const t0 = performance.now()
+        let peak = 0
+        const look = () => {
+          peak = Math.max(peak, window.__durex.world.waterTest.swing)
+          if (performance.now() - t0 < ms) requestAnimationFrame(look)
+          else resolve(peak)
+        }
+        look()
+      }),
+    ms,
+  )
+/** Blows it up by scrolling through «Pump», then goes to «Let go». */
+async function blowUp(page) {
+  await until(page, () => window.__durex.more === true, null, 120000)
+  await scrollTo(page, '#pump', 0.9)
+  await until(page, () => window.__durex.world.balloon.condom.volume > 39.2)
+  await scrollTo(page, '#letgo', 0.12)
+  await page.waitForTimeout(600)
+}
 
 try {
   await waitForServer()
@@ -108,12 +143,15 @@ try {
       h1: document.querySelector('h1')?.textContent?.replace(/\s+/g, ' ').trim(),
       disclaimer: document.querySelector('.disclaimer')?.textContent ?? '',
       sources: document.querySelectorAll('.sources li').length,
+      cited: [...document.querySelectorAll('sup a[href^="#source-"]')].every((a) => document.querySelector(a.getAttribute('href'))),
+      credits: document.querySelectorAll('.credits a[href*="freesound.org"]').length,
       mail: document.querySelector('.commission a')?.getAttribute('href') ?? '',
     }))
     check(meta.lang === 'en', `lang="${meta.lang}"`)
     check(meta.h1 === 'Annoying, isn’t it?', `h1 is the headline in real text (${meta.h1})`)
     check(meta.disclaimer.includes('unofficial') && meta.disclaimer.includes('not commissioned'), 'unofficial-concept disclaimer is present')
-    check(meta.sources >= 2, `the facts carry their sources (${meta.sources})`)
+    check(meta.sources >= 6 && meta.cited, `the facts carry their sources, every citation resolves (${meta.sources})`)
+    check(meta.credits === 8, `the recordings are credited (${meta.credits})`)
     check(meta.mail.startsWith('mailto:itsmetti@proton.me'), 'the footer offers a site like this, by mail')
     await page.waitForSelector('.gate:not([hidden])', { timeout: 120000 })
     await page.keyboard.press('Tab')
@@ -141,6 +179,80 @@ try {
     const zero = await page.evaluate(() => window.__durex.world?.state.feature)
     check(zero > 0.95, `«Zero gravity» brings a packet forward (${zero?.toFixed(2)})`)
     check(inZero === 0, `…and the others leave its copy alone (${inZero} in the way)`)
+
+    // 01 — torn open, the ring out.
+    await until(page, () => window.__durex.more === true, null, 120000)
+    await scrollTo(page, '#rip', 0.6)
+    await until(page, () => window.__durex.world.state.tear > 0.99 && window.__durex.world.state.ring > 0.3)
+    const rip = await page.evaluate(() => ({ tear: window.__durex.world.state.tear, ring: window.__durex.world.state.ring }))
+    check(rip.tear > 0.99 && rip.ring > 0.3, `01 — the packet tears open and the ring comes out (tear ${rip.tear.toFixed(2)}, ring ${rip.ring.toFixed(2)})`)
+    await page.screenshot({ path: `${OUT}desktop-rip.png` })
+    // 02 — unrolled.
+    await scrollTo(page, '#roll', 0.95)
+    await until(page, () => window.__durex.world.balloon.condom.unroll > 0.99)
+    const roll = await page.evaluate(() => ({ unroll: window.__durex.world.balloon.condom.unroll, top: window.__durex.world.balloon.condom.top }))
+    check(roll.unroll > 0.99 && Math.abs(roll.top - 180) < 2, `02 — it unrolls to 180 mm (${roll.top.toFixed(0)} mm)`)
+    await page.screenshot({ path: `${OUT}desktop-roll.png` })
+    // 03 — pumped: the mouse, the space bar, the scroll; the gauge reads the shape. The button
+    // works as soon as the chapter is on screen, before its pin takes hold.
+    await page.evaluate(() => window.scrollTo(0, document.querySelector('#pump').getBoundingClientRect().top + scrollY - innerHeight * 0.25))
+    await page.waitForTimeout(800)
+    const pump = await (await page.$('[data-pump]')).boundingBox()
+    await page.mouse.move(pump.x + pump.width / 2, pump.y + pump.height / 2)
+    await page.mouse.down()
+    await until(page, () => window.__durex.world.balloon.condom.volume > 6)
+    await page.mouse.up()
+    const byMouse = (await balloon(page)).volume
+    check(byMouse > 6, `03 — holding the button blows it up (${byMouse.toFixed(1)} L)`)
+    await page.focus('[data-pump]')
+    await page.keyboard.down('Space')
+    await until(page, (v) => window.__durex.world.balloon.condom.volume > v + 2, byMouse)
+    await page.keyboard.up('Space')
+    const byKey = (await balloon(page)).volume
+    check(byKey > byMouse + 2, `…so does holding the space bar (${byKey.toFixed(1)} L)`)
+    const gauge = await page.evaluate(() => ({ text: document.querySelector('.gauge-num').textContent, volume: window.__durex.world.balloon.condom.volume.toFixed(1) }))
+    check(gauge.text === gauge.volume, `the gauge reads what the shape holds (${gauge.text} L)`)
+    await scrollTo(page, '#pump', 0.9)
+    await until(page, () => window.__durex.world.balloon.condom.volume > 39.2)
+    const full = await page.evaluate(() => ({ volume: window.__durex.world.balloon.condom.volume, reached: document.querySelectorAll('.milestone.is-reached').length }))
+    check(Math.abs(full.volume - 40) < 0.8 && full.reached === 2, `scrolled through, 40 litres — still holding (${full.volume.toFixed(1)} L, ${full.reached} milestones)`)
+    await page.screenshot({ path: `${OUT}desktop-pump.png` })
+    // 04 — let go: off round the page, and down.
+    await scrollTo(page, '#letgo', 0.12)
+    await page.waitForTimeout(600)
+    const walls = await page.evaluate(() => window.__durex.world.physics.bodies.filter((b) => b.userData instanceof Element).length)
+    check(walls >= 7, `the headlines are walls it can hit (${walls})`)
+    await page.click('[data-letgo="go"]')
+    await until(page, () => window.__durex.world.balloon.mode === 'flying', null, 10000)
+    check((await balloon(page)).mode === 'flying', '04 — let go, it flies')
+    await page.screenshot({ path: `${OUT}desktop-letgo.png` })
+    await until(page, () => window.__durex.world.balloon.mode === 'fallen', null, 60000)
+    await page.waitForTimeout(2000)
+    // Spent, it drops — to the floor, or onto a headline — and stays on screen.
+    await until(page, () => Math.hypot(window.__durex.world.balloon.body.velocity.x, window.__durex.world.balloon.body.velocity.y) < 40, null, 20000)
+    const down = await page.evaluate(() => {
+      const w = window.__durex.world
+      const p = w.balloon.body.position
+      const v = w.balloon.body.velocity
+      return { mode: w.balloon.mode, x: p.x, y: p.y, speed: Math.hypot(v.x, v.y), w: w.layer.width / 2, h: w.layer.height / 2, status: document.querySelector('.letgo-status').textContent }
+    })
+    check(down.mode === 'fallen' && Math.abs(down.x) <= down.w && Math.abs(down.y) <= down.h && down.speed < 40, `…empties, and comes to rest on screen (${down.x.toFixed(0)}, ${down.y.toFixed(0)}, ${down.speed.toFixed(0)} px/s)`)
+    check(down.status.includes('comes back down'), `…and the page says so («${down.status}»)`)
+    // 05 — the water test, poked.
+    await scrollTo(page, '#tested', 0.3)
+    await until(page, () => window.__durex.world.state.water > 0.99)
+    await page.waitForTimeout(3000)
+    const calm = await swingPeak(page, 700)
+    await page.click('[data-poke]')
+    const swung = await swingPeak(page, 1200)
+    check(swung > 0.15 && swung > calm, `05 — poked, the drop swings (${calm.toFixed(2)} → ${swung.toFixed(2)} rad)`)
+    await page.screenshot({ path: `${OUT}desktop-tested.png` })
+    // 06 — the balloons rise.
+    await scrollTo(page, '#playsafe', 0.6)
+    await until(page, () => window.__durex.world.state.rise > 0.5)
+    const rise = await page.evaluate(() => window.__durex.world.state.rise)
+    check(rise > 0.5, `06 — the balloons rise (${rise.toFixed(2)})`)
+    await page.screenshot({ path: `${OUT}desktop-playsafe.png` })
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
     await page.waitForTimeout(1500)
     const gone = await page.evaluate(() => window.__durex.world?.state.feature)
@@ -149,10 +261,28 @@ try {
   })
 
   await visit(browser, 'With sound', '?capture', { viewport: { width: 1280, height: 800 } }, async (page) => {
-    await open(page, 'sound')
+    await page.waitForSelector('.gate:not([hidden])', { timeout: 120000 })
+    const clicked = Date.now()
+    await page.click('[data-gate="sound"]')
+    await page.waitForFunction(() => document.documentElement.classList.contains('is-open'), null, { timeout: 60000 })
+    const punchline = (Date.now() - clicked) / 1000
     const s = await page.evaluate(() => ({ cried: window.__durex.cried, audio: window.__durex.stage.sound?.context?.state, pressed: document.querySelector('.sound-toggle').getAttribute('aria-pressed') }))
     check(s.cried === true && s.audio === 'running', `play it: the cry plays (${s.audio})`)
+    check(punchline < 4, `…and the punchline lands right after it (${punchline.toFixed(1)} s)`)
     check(s.pressed === 'true', 'the HUD toggle says sound is on')
+    await until(page, () => window.__durex.sound.musicPlaying === true, null, 30000)
+    check(await page.evaluate(() => window.__durex.sound.musicPlaying), 'then the music plays, low behind it')
+    // Tie it: kept, it floats along into the next chapter.
+    await blowUp(page)
+    await page.click('[data-letgo="tie"]')
+    await until(page, () => window.__durex.world.balloon.mode === 'tied', null, 10000)
+    const status = await page.evaluate(() => document.querySelector('.letgo-status').textContent)
+    check((await balloon(page)).mode === 'tied' && status.startsWith('Tied'), `04 — tie it: it stays («${status}»)`)
+    await scrollTo(page, '#tested', 0.3)
+    await page.waitForTimeout(1500)
+    const kept = await page.evaluate(() => ({ mode: window.__durex.world.balloon.mode, shown: window.__durex.world.balloon.group.visible, volume: window.__durex.world.balloon.condom.volume }))
+    check(kept.mode === 'tied' && kept.shown && kept.volume > 39, `…and comes along to the water test, still full (${kept.volume.toFixed(1)} L)`)
+    await page.screenshot({ path: `${OUT}sound-tied.png` })
   })
 
   await visit(browser, 'The models', 'models.html', { viewport: { width: 1280, height: 800 } }, async (page) => {
@@ -167,13 +297,16 @@ try {
       m.set(1, 18)
       out.eighteen = m.condom.volume
       m.set(1, 40)
-      out.forty = { volume: m.condom.volume, top: m.condom.top, width: m.condom.width }
+      out.forty = { volume: m.condom.volume, top: m.condom.top, bottom: m.condom.bottom, width: m.condom.width }
       return out
     })
     check(shapes.ring.top - shapes.ring.bottom < 25, `rolled up it is a ring (${(shapes.ring.top - shapes.ring.bottom).toFixed(1)} mm tall)`)
     check(Math.abs(shapes.unrolled.top - 180) < 2 && shapes.unrolled.volume < 0.3, `unrolled it is 180 mm long (${shapes.unrolled.top.toFixed(0)} mm, ${shapes.unrolled.volume.toFixed(2)} L)`)
     check(Math.abs(shapes.eighteen - 18) < 0.5 && Math.abs(shapes.forty.volume - 40) < 0.8, `the gauge reads what the shape holds (${shapes.eighteen.toFixed(1)} L, ${shapes.forty.volume.toFixed(1)} L)`)
-    check(shapes.forty.top > 600 && shapes.forty.width > 120, `forty litres is a long balloon (${(shapes.forty.top / 10).toFixed(0)} cm tall, ${((shapes.forty.width * 2) / 10).toFixed(0)} cm wide)`)
+    const tall = shapes.forty.top - shapes.forty.bottom
+    check(shapes.forty.width > 170 && tall / (shapes.forty.width * 2) < 1.9, `forty litres is a big, round balloon (${(tall / 10).toFixed(0)} cm tall, ${((shapes.forty.width * 2) / 10).toFixed(0)} cm wide)`)
+    const board = await page.evaluate(() => document.querySelectorAll('[data-sound]').length)
+    check(board === 8, `every sound can be listened to on its own (${board})`)
     await page.screenshot({ path: `${OUT}models.png` })
   })
 
@@ -190,12 +323,27 @@ try {
     const inZero = await settled(page)
     check(inZero === 0, `…and of the chapter's copy (${inZero} in the way)`)
     await page.screenshot({ path: `${OUT}mobile-zero.png` })
+    // Every chapter fits the screen.
+    let widest = 0
+    for (const id of ['#rip', '#roll', '#pump', '#letgo', '#tested', '#playsafe']) {
+      await scrollTo(page, id, 0.5)
+      await page.waitForTimeout(300)
+      widest = Math.max(widest, await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth))
+    }
+    check(widest <= 1, `no chapter overflows the screen (${widest}px)`)
+    await page.screenshot({ path: `${OUT}mobile-playsafe.png` })
   })
 
   await visit(browser, 'Reduced motion', '?capture', { viewport: { width: 1280, height: 800 }, reducedMotion: 'reduce' }, async (page) => {
     await open(page, 'silent')
     const state = await page.evaluate(() => ({ reduced: document.documentElement.classList.contains('reduced'), title: getComputedStyle(document.querySelector('.hero-title')).opacity }))
     check(state.reduced && state.title === '1', 'the headline reads at once, without motion')
+    // Let go without the flight: it empties where it is.
+    await blowUp(page)
+    await page.click('[data-letgo="go"]')
+    await until(page, () => window.__durex.world.balloon.condom.volume < 0.5, null, 20000)
+    const spent = await balloon(page)
+    check(spent.mode === 'scripted' && spent.volume < 0.5, `let go, it empties where it is — no flight (${spent.mode}, ${spent.volume.toFixed(1)} L)`)
   })
 
   await browser.close()

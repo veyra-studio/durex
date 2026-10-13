@@ -91,6 +91,9 @@ body {
   display: flex;
   gap: 0.4rem;
 }
+.review-sounds {
+  flex-wrap: wrap;
+}
 .review-panel button {
   padding: 0.45rem 0.9rem;
   border: 1px solid var(--line);
@@ -476,7 +479,7 @@ html.no-webgl .fallback-packet {
   display: block;
 }
 
-/* 00 — Zero gravity */
+/* The chapters: the copy on the left, the world on the right (on phones, copy on top). */
 .kicker {
   margin: 0 0 1rem;
   font-size: 0.78rem;
@@ -485,8 +488,23 @@ html.no-webgl .fallback-packet {
   text-transform: uppercase;
   color: var(--crimson);
 }
+.chapter {
+  position: relative;
+}
 .zero {
   height: 260vh;
+}
+.rip,
+.roll {
+  height: 240vh;
+}
+/* Once full, done: a screen more to leave. */
+.pump {
+  height: 220vh;
+}
+.letgo,
+.tested {
+  height: 190vh;
 }
 .pin {
   position: sticky;
@@ -497,26 +515,26 @@ html.no-webgl .fallback-packet {
   align-items: center;
   padding: 6rem var(--gutter) 3rem;
 }
-.zero-copy {
+.copy {
   max-width: 34rem;
   opacity: calc(0.15 + var(--in, 0) * 0.85);
-  /* Unseen on the dark; holds the words when a pushed packet drifts behind them. */
+  /* Unseen on the dark; holds the words when something drifts behind them. */
   text-shadow:
     0 0 0.9em rgb(4 5 11 / 0.85),
     0 0 0.25em rgb(4 5 11 / 0.7);
 }
-.zero-title {
+.chapter-title {
   margin: 0 0 1.4rem;
   font-family: var(--display);
   font-weight: 400;
   font-size: clamp(3rem, 7vw, 7rem);
   line-height: 0.95;
 }
-.zero-title em {
+.chapter-title em {
   font-style: italic;
   color: var(--crimson);
 }
-.zero-body {
+.chapter-body {
   margin: 0 0 0.9rem;
   max-width: 30rem;
   font-size: clamp(1rem, 0.96rem + 0.3vw, 1.2rem);
@@ -529,28 +547,196 @@ sup a {
   margin-left: 0.1em;
 }
 
-/* In production */
-.next {
-  display: grid;
-  justify-items: center;
-  gap: 0.6rem;
-  padding: 24vh var(--gutter) 18vh;
-  text-align: center;
+/* 03 — Pump */
+.pump-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.6rem;
+  margin: 1.4rem 0 1.1rem;
 }
-.next-title {
+.btn-hold {
+  padding: 1.1rem 1.9rem;
+  /* A long press neither scrolls, selects nor opens a menu. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+.btn-hold[data-held] {
+  background: var(--crimson);
+  color: var(--paper);
+  transform: scale(0.95);
+}
+.gauge {
   margin: 0;
   font-family: var(--display);
-  font-weight: 400;
-  font-size: clamp(2.6rem, 6vw, 5.5rem);
+  font-size: clamp(2.4rem, 4vw, 3.6rem);
   line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
-.next-title em {
+.gauge-unit {
+  font-family: var(--text);
+  font-size: 0.85rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.milestone {
+  margin: 0 0 0.6rem;
+  max-width: 30rem;
+  color: var(--muted);
+  opacity: 0.22;
+  transform: translateY(0.4em);
+  transition:
+    opacity 0.5s ease,
+    transform 0.5s ease;
+}
+.milestone strong {
+  color: var(--paper);
+  font-weight: 600;
+}
+.milestone em {
+  font-family: var(--display);
+  font-size: 1.4em;
   color: var(--crimson);
 }
-.next-body {
-  max-width: 32rem;
-  margin: 0.6rem 0 0;
+.milestone.is-reached {
+  opacity: 1;
+  transform: none;
+}
+
+/* 04 — Let go */
+.letgo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin: 1.4rem 0 1rem;
+}
+.letgo-controls .btn[disabled] {
+  opacity: 0.35;
+  cursor: default;
+}
+.letgo-status {
+  min-height: 1.6em;
+  margin: 0;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 1.5rem;
+}
+
+/* 05 — Tested */
+.tested .btn {
+  margin-top: 0.6rem;
+}
+
+/* The words for the sounds: they pop up beside what makes them. */
+.caption {
+  position: absolute;
+  top: 24%;
+  right: clamp(1rem, 10vw, 12rem);
+  margin: 0;
+  font-family: var(--display);
+  font-style: italic;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  color: var(--crimson);
+  opacity: 0;
+  pointer-events: none;
+}
+.caption-big {
+  top: 38%;
+  right: auto;
+  left: 52%;
+  font-size: clamp(3rem, 7vw, 6rem);
+}
+/* Clear of the packet's corner; between the copy and the water. */
+[data-caption='rip'] {
+  top: 11%;
+  right: clamp(1rem, 4vw, 5rem);
+}
+[data-caption='slosh'] {
+  top: 30%;
+  right: auto;
+  left: 50%;
+}
+.caption.is-on {
+  animation: caption 1.4s ease-out both;
+}
+@keyframes caption {
+  0% {
+    opacity: 0;
+    transform: translateY(0.4em) rotate(-6deg) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: rotate(-6deg) scale(1.06);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-0.2em) rotate(-6deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.6em) rotate(-6deg);
+  }
+}
+html.reduced .caption.is-on {
+  opacity: 1;
+}
+
+/* A headline the balloon runs into. */
+.is-hit {
+  animation: hit 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+}
+@keyframes hit {
+  25% {
+    transform: translate(var(--hx, 6px), var(--hy, -4px)) rotate(var(--hr, -1.2deg));
+  }
+  55% {
+    transform: translate(calc(var(--hx, 6px) * -0.4), calc(var(--hy, -4px) * -0.4)) rotate(calc(var(--hr, -1.2deg) * -0.4));
+  }
+}
+
+/* 06 — Play safe */
+.playsafe {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 150vh;
+  padding: 24vh var(--gutter);
+  text-align: center;
+}
+.quote {
+  margin: 0;
+  max-width: 48rem;
+}
+.quote p {
+  margin: 0 0 1.4rem;
+  font-family: var(--display);
+  font-size: clamp(1.9rem, 3.6vw, 3.4rem);
+  line-height: 1.12;
+  text-shadow: 0 0 1em rgb(4 5 11 / 0.9);
+}
+.quote footer {
   color: var(--muted);
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Footer */
@@ -587,11 +773,15 @@ sup a {
 .sources a {
   color: var(--paper);
 }
-.disclaimer {
+.disclaimer,
+.credits {
   margin: 0;
   max-width: 52rem;
   font-size: 0.85rem;
   color: var(--muted);
+}
+.credits a {
+  color: var(--paper);
 }
 .footer-links {
   display: flex;
@@ -610,6 +800,20 @@ sup a {
   .pin {
     align-items: start;
     padding-top: 5.5rem;
+  }
+  .chapter-title {
+    font-size: clamp(2.6rem, 12vw, 3.6rem);
+  }
+  .caption {
+    top: auto;
+    right: 1.2rem;
+    bottom: 14%;
+    left: auto;
+  }
+  .caption-big {
+    left: auto;
+    right: 1.2rem;
+    bottom: 30%;
   }
   .review-ui {
     position: fixed;
